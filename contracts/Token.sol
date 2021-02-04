@@ -12,7 +12,7 @@ contract Token is ERC20{
 
     uint public constant supply = 500;
 
-    struct Checkpoint { // TODO determine int size
+    struct Checkpoint {
         uint256 fromBlock;
         uint256 value;
     }
@@ -20,13 +20,13 @@ contract Token is ERC20{
     // history of account balance
     mapping(address => Checkpoint[]) balances;
 
-    // total delegated percents
+    // total delegated percents per address at given time
     mapping(address => Checkpoint[]) totalDelegated;
     // delegator => delegatee => percent
     mapping(address => mapping(address => uint256)) delegations;   
-    // all delegatees of address
+    // all current delegatees of address
     mapping(address => address[]) public delegatees;
-    // delegated voting power of address
+    // cumulated delegated voting power to address
     mapping(address => Checkpoint[]) delegatedVotingPower;
 
     constructor() public ERC20("AB", "AB") {
@@ -52,9 +52,7 @@ contract Token is ERC20{
         
         // get current values
         uint nowTotalDelegated = _getValueAt(totalDelegated[msg.sender], block.number);
-        // console.log("nowTotalDelegated ", nowTotalDelegated);
         uint nowDelegatedToAddress = delegations[msg.sender][_delegatee];
-        // console.log("nowDelegatedToAddress ", nowDelegatedToAddress);
         
         if(nowDelegatedToAddress == 0) {
             require(delegatees[msg.sender].length < 5, "Maximum 5 delegatees");
@@ -77,11 +75,7 @@ contract Token is ERC20{
         else if (nowDelegatedToAddress == 0) delegatees[msg.sender].push(_delegatee);
     }
 
-    function getDelegatees(address _addr) public view returns (address[] memory  ) {
-        return delegatees[_addr];
-    }
-
-    function votePowerOfAt(address _address, uint256 _block) public view returns(uint256) {  // TODO - uint256?
+    function votePowerOfAt(address _address, uint256 _block) public view returns(uint256) { 
         require(block.number > _block, "Given block in the future");
         uint balance = balanceOfAt(_address, _block); 
         uint delegatedPowerOfAddress = balance.mul(_getValueAt(totalDelegated[_address], _block)).div(100);
@@ -163,7 +157,7 @@ contract Token is ERC20{
     function _removeFromArray(address[] storage _array, address _addr) internal {
         for (uint8 i=0; i < _array.length; i++) {
             if (_array[i] == _addr) {
-                if (i != _array.length - 1) { // first in 1-elem array, or last elem
+                if (i != _array.length - 1) { // first in 1-elem array, or last elem in array
                     _array[i] = _array[_array.length-1];
                 }
                 _array.pop();
